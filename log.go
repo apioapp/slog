@@ -16,31 +16,40 @@ const (
 
 var logs []string
 
-// Send sends message to the channel with timestamp
+func truncateString(str string, num int) string {
+	bnoden := str
+	if len(str) > num {
+		if num > 3 {
+			num -= 3
+		}
+		bnoden = str[0:num] + "..."
+	}
+	return bnoden
+}
+
+// Send sends message to the channel with ISO timestamp
 func store(severity int, message string, a ...interface{}) {
 	go func() {
-		logs = append(logs, strconv.Itoa(severity)+time.Now().Format("02/01/2006 15:04:05")+": "+fmt.Sprintf(message, a...))
+		logs = append(logs, strconv.Itoa(severity)+time.Now().Format("2006-01-02 15:04:05")+": "+fmt.Sprintf(message, a...))
 	}()
 }
 
 // Infof logs to dashboard (sends message through log channel) plus echoes to standard output
 func Infof(message string, a ...interface{}) {
 	if len(a) > 0 {
-		log.Printf(message+"\n", a...)
-	} else {
-		log.Println(message)
+		message = truncateString(fmt.Sprintf(message, a...), 5000)
 	}
-	store(infoLog, message, a...)
+	log.Println(message)
+	store(infoLog, message)
 }
 
 // Errorf logs to dashboard (sends message through log channel) plus echoes to standard output
 func Errorf(message string, a ...interface{}) {
 	if len(a) > 0 {
-		log.Printf(message+"\n", a...)
-	} else {
-		log.Println(message)
+		message = truncateString(fmt.Sprintf(message, a...), 5000)
 	}
-	store(errorLog, message, a...)
+	log.Println(message)
+	store(errorLog, message)
 }
 
 // Filter returns logs for minimum level
