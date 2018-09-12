@@ -45,12 +45,7 @@ func store(severity int, message string, a ...interface{}) {
 
 // Infof logs to dashboard (sends message through log channel) plus echoes to standard output
 func Infof(message string, a ...interface{}) {
-	f(InfoLog, message, a)
-}
-
-// Warningf logs to dashboard (sends message through log channel) plus echoes to standard output
-func Warningf(message string, a ...interface{}) {
-	f(WarningLog, message, a...)
+	f(InfoLog, message, a...)
 }
 
 // Errorf logs to dashboard (sends message through log channel) plus echoes to standard output
