@@ -2,7 +2,7 @@ package slog
 
 import (
 	"fmt"
-	"log"
+	"os"
 	"strconv"
 	"time"
 )
@@ -19,10 +19,15 @@ type Hook func(message string) error
 
 var logs []string
 var hooks map[int][]Hook
+var minlevel int
 
 // RegisterHook will execute given hook function on every message
 func RegisterHook(h Hook, level int) {
 	hooks[level] = append(hooks[level], h)
+}
+
+func SetMinLevel(level int) {
+	minlevel = level
 }
 
 func truncateString(str string, num int) string {
@@ -56,14 +61,18 @@ func Errorf(message string, a ...interface{}) {
 // Fatalf logs to dashboard (sends message through log channel) plus echoes to standard output
 func Fatalf(message string, a ...interface{}) {
 	f(FatalLog, message, a...)
+	os.Exit(1)
 }
 
 func f(level int, message string, a ...interface{}) {
+	if level < minlevel {
+		return
+	}
 	if len(hooks[level]) > 0 {
 		for _, h := range hooks[level] {
 			err := h(fmt.Sprintf(message, a...))
 			if err != nil {
-				log.Printf("Log: hook returned error %#v %v\n", h, err)
+				fmt.Fprintf(os.Stderr, "Log: hook returned error %#v %v\n", h, err)
 				store(level, fmt.Sprintf("Log: hook returned error %#v %v\n", h, err))
 			}
 		}
@@ -71,7 +80,7 @@ func f(level int, message string, a ...interface{}) {
 	if len(a) > 0 {
 		message = truncateString(fmt.Sprintf(message, a...), 5000)
 	}
-	log.Println(message)
+	fmt.Fprintln(os.Stderr, message)
 	store(level, message)
 }
 
