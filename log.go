@@ -8,9 +8,13 @@ import (
 )
 
 const (
+	// InfoLog is Info level (lowest) for SetMinLevel
 	InfoLog = 1 << iota
+	// WarningLog is Warning level for SetMinLevel, between InfoLog and ErrorLog
 	WarningLog
+	// ErrorLog is Error level for SetMinLevel, between WarningLog and FatalLog
 	ErrorLog
+	// FatalLog is highest log level for SetMinLevel (logging into Fatalf will also throw panic())
 	FatalLog
 )
 
@@ -26,6 +30,7 @@ func RegisterHook(h Hook, level int) {
 	hooks[level] = append(hooks[level], h)
 }
 
+// SetMinLevel sets the log level below that messages will be dropped
 func SetMinLevel(level int) {
 	minlevel = level
 }
@@ -70,6 +75,9 @@ func f(level int, message string, a ...interface{}) {
 	}
 	if len(hooks[level]) > 0 {
 		for _, h := range hooks[level] {
+			if h == nil {
+				continue
+			}
 			err := h(fmt.Sprintf(message, a...))
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Log: hook returned error %#v %v\n", h, err)
