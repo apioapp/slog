@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -24,6 +25,7 @@ type Hook func(message string) error
 var logs []string
 var hooks map[int][]Hook
 var minlevel int
+var m sync.Mutex
 
 // RegisterHook will execute given hook function on every message
 func RegisterHook(h Hook, level int) {
@@ -49,7 +51,9 @@ func truncateString(str string, num int) string {
 // Send sends message to the channel with ISO timestamp
 func store(severity int, message string, a ...interface{}) {
 	go func() {
+		m.Lock()
 		logs = append(logs, strconv.Itoa(severity)+time.Now().Format("2006-01-02 15:04:05")+": "+fmt.Sprintf(message, a...))
+		m.Unlock()
 	}()
 }
 
