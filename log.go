@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"sync"
-	"time"
 )
 
 const (
@@ -23,7 +21,7 @@ const (
 // Hook is a callback function
 type Hook func(message string) error
 
-var logs []string
+// var logs []string
 var hooks map[int][]Hook
 var minlevel int
 var m sync.Mutex
@@ -59,13 +57,13 @@ func truncateString(str string, num int) string {
 }
 
 // Send sends message to the channel with ISO timestamp
-func store(severity int, message string, a ...interface{}) {
-	go func() {
-		m.Lock()
-		logs = append(logs, strconv.Itoa(severity)+time.Now().Format("2006-01-02 15:04:05")+": "+fmt.Sprintf(message, a...))
-		m.Unlock()
-	}()
-}
+// func store(severity int, message string, a ...interface{}) {
+// 	go func() {
+// 		m.Lock()
+// 		logs = append(logs, strconv.Itoa(severity)+time.Now().Format("2006-01-02 15:04:05")+": "+fmt.Sprintf(message, a...))
+// 		m.Unlock()
+// 	}()
+// }
 
 // Infof logs to dashboard (sends message through log channel) plus echoes to standard output
 func Infof(message string, a ...interface{}) {
@@ -95,7 +93,7 @@ func f(level int, message string, a ...interface{}) {
 			err := h(fmt.Sprintf(message, a...))
 			if err != nil {
 				fmt.Fprintf(out, "Log: hook returned error %#v %v\n", h, err)
-				store(level, fmt.Sprintf("Log: hook returned error %#v %v\n", h, err))
+				// store(level, fmt.Sprintf("Log: hook returned error %#v %v\n", h, err))
 			}
 		}
 	}
@@ -103,19 +101,19 @@ func f(level int, message string, a ...interface{}) {
 		message = truncateString(fmt.Sprintf(message, a...), 5000)
 	}
 	fmt.Fprintln(out, message)
-	store(level, message)
+	//store(level, message)
 }
 
-// Filter returns logs for minimum level
-func Filter(minlevel int) (ret []string) {
-	for _, s := range logs {
-		z, _ := strconv.Atoi(s[0:1])
-		if z&^minlevel > 0 {
-			ret = append(ret, s[1:])
-		}
-	}
-	return
-}
+// // Filter returns logs for minimum level
+// func Filter(minlevel int) (ret []string) {
+// 	for _, s := range logs {
+// 		z, _ := strconv.Atoi(s[0:1])
+// 		if z&^minlevel > 0 {
+// 			ret = append(ret, s[1:])
+// 		}
+// 	}
+// 	return
+// }
 
 func init() {
 	hooks = make(map[int][]Hook, 1)
