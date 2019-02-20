@@ -2,6 +2,7 @@ package slog
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"sync"
@@ -27,6 +28,8 @@ var hooks map[int][]Hook
 var minlevel int
 var m sync.Mutex
 
+var out io.Writer = os.Stderr
+
 // RegisterHook will execute given hook function on every message
 func RegisterHook(h Hook, level int) {
 	hooks[level] = append(hooks[level], h)
@@ -35,6 +38,13 @@ func RegisterHook(h Hook, level int) {
 // SetMinLevel sets the log level below that messages will be dropped
 func SetMinLevel(level int) {
 	minlevel = level
+}
+
+// SetOutput sets the output destination for the logger.
+func SetOutput(w io.Writer) {
+	m.Lock()
+	defer m.Unlock()
+	out = w
 }
 
 func truncateString(str string, num int) string {
@@ -84,7 +94,7 @@ func f(level int, message string, a ...interface{}) {
 			}
 			err := h(fmt.Sprintf(message, a...))
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Log: hook returned error %#v %v\n", h, err)
+				fmt.Fprintf(out, "Log: hook returned error %#v %v\n", h, err)
 				store(level, fmt.Sprintf("Log: hook returned error %#v %v\n", h, err))
 			}
 		}
@@ -92,7 +102,7 @@ func f(level int, message string, a ...interface{}) {
 	if len(a) > 0 {
 		message = truncateString(fmt.Sprintf(message, a...), 5000)
 	}
-	fmt.Fprintln(os.Stderr, message)
+	fmt.Fprintln(out, message)
 	store(level, message)
 }
 
