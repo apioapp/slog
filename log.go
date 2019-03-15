@@ -116,7 +116,7 @@ func f(level int, message string, a ...interface{}) {
 	if len(a) > 0 {
 		message = truncateString(fmt.Sprintf(message, a...), maxlen)
 	}
-	message = time.Now().String() + message
+	message = time.Now().Format("2006-01-02 15:04:05Z07:00 ") + message
 	m.Lock()
 	defer m.Unlock()
 	fmt.Fprintln(out, message)
