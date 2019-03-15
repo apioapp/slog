@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"time"
 )
 
 const (
@@ -18,23 +19,29 @@ const (
 	FatalLog
 )
 
-// Hook is a callback function
-type Hook func(message string) error
+// Hook is a callback function type, getting message as argument
+type HookFunc func(message string) error
 
 // var logs []string
-var hooks map[int][]Hook
+var hooks map[int][]HookFunc
 var minlevel int
 var m sync.Mutex
 
 var out io.Writer = os.Stderr
 
+var maxlen = 5000
+
 // RegisterHook will execute given hook function on every message
-func RegisterHook(h Hook, level int) {
+func RegisterHook(h HookFunc, level int) {
+	m.Lock()
+	defer m.Unlock()
 	hooks[level] = append(hooks[level], h)
 }
 
 // SetMinLevel sets the log level below that messages will be dropped
 func SetMinLevel(level int) {
+	m.Lock()
+	defer m.Unlock()
 	minlevel = level
 }
 
@@ -43,6 +50,15 @@ func SetOutput(w io.Writer) {
 	m.Lock()
 	defer m.Unlock()
 	out = w
+}
+
+// SetMaxLen sets the long message truncation that occurs when
+// arguments are used (like "%v", somehugeMap)
+// to a new character count limit, default is 5000
+func SetMaxLen(l int) {
+	m.Lock()
+	defer m.Unlock()
+	maxlen = l
 }
 
 func truncateString(str string, num int) string {
@@ -98,8 +114,11 @@ func f(level int, message string, a ...interface{}) {
 		}
 	}
 	if len(a) > 0 {
-		message = truncateString(fmt.Sprintf(message, a...), 5000)
+		message = truncateString(fmt.Sprintf(message, a...), maxlen)
 	}
+	message = time.Now().String() + message
+	m.Lock()
+	defer m.Unlock()
 	fmt.Fprintln(out, message)
 	//store(level, message)
 }
@@ -116,5 +135,5 @@ func f(level int, message string, a ...interface{}) {
 // }
 
 func init() {
-	hooks = make(map[int][]Hook, 1)
+	hooks = make(map[int][]HookFunc, 1)
 }
