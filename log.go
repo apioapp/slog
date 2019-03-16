@@ -101,6 +101,8 @@ func f(level int, message string, a ...interface{}) {
 	if level < minlevel {
 		return
 	}
+	m.Lock()
+	defer m.Unlock()
 	if len(hooks[level]) > 0 {
 		for _, h := range hooks[level] {
 			if h == nil {
@@ -117,8 +119,6 @@ func f(level int, message string, a ...interface{}) {
 		message = truncateString(fmt.Sprintf(message, a...), maxlen)
 	}
 	message = time.Now().Format("2006-01-02 15:04:05Z07:00 ") + message
-	m.Lock()
-	defer m.Unlock()
 	fmt.Fprintln(out, message)
 	//store(level, message)
 }
