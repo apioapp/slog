@@ -65,7 +65,9 @@ func Infof(message string, args ...interface{}) {
 
 // Errorf logs to dashboard (sends message through log channel) plus echoes to standard output
 func Errorf(message string, args ...interface{}) {
-	hook(fmt.Sprintf(message, args...))
+	if hook != nil {
+		hook(fmt.Sprintf(message, args...))
+	}
 	log.Errorf(message, args...)
 }
 
