@@ -1,12 +1,17 @@
 package slog
 
 import (
-	"fmt"
 	"io"
 	"os"
-	"sync"
 	"time"
+
+	"runtime"
+
+	"github.com/natefinch/lumberjack"
+	log "github.com/sirupsen/logrus"
 )
+
+const LogFilePath = "logs/misc.log"
 
 const (
 	// InfoLog is Info level (lowest) for SetMinLevel
@@ -19,46 +24,15 @@ const (
 	FatalLog
 )
 
-// Hook is a callback function type, getting message as argument
+// HookFunc is a callback function type, getting message as argument
 type HookFunc func(message string) error
 
-// var logs []string
-var hooks map[int][]HookFunc
-var minlevel int
-var m sync.Mutex
-
-var out io.Writer = os.Stderr
-
+var lumberjackLogrotate *lumberjack.Logger
 var maxlen = 5000
 
 // RegisterHook will execute given hook function on every message
-func RegisterHook(h HookFunc, level int) {
-	m.Lock()
-	defer m.Unlock()
-	hooks[level] = append(hooks[level], h)
-}
-
-// SetMinLevel sets the log level below that messages will be dropped
-func SetMinLevel(level int) {
-	m.Lock()
-	defer m.Unlock()
-	minlevel = level
-}
-
-// SetOutput sets the output destination for the logger.
-func SetOutput(w io.Writer) {
-	m.Lock()
-	defer m.Unlock()
-	out = w
-}
-
-// SetMaxLen sets the long message truncation that occurs when
-// arguments are used (like "%v", somehugeMap)
-// to a new character count limit, default is 5000
-func SetMaxLen(l int) {
-	m.Lock()
-	defer m.Unlock()
-	maxlen = l
+func RegisterHook(h HookFunc) {
+	log.SetOutput(io.MultiWriter(os.Stdout, lumberjackLogrotate, HookWriter{Hook: h}))
 }
 
 func truncateString(str string, num int) string {
@@ -82,58 +56,47 @@ func truncateString(str string, num int) string {
 // }
 
 // Infof logs to dashboard (sends message through log channel) plus echoes to standard output
-func Infof(message string, a ...interface{}) {
-	f(InfoLog, message, a...)
+func Infof(message string, args ...interface{}) {
+	log.Infof(message, args...)
 }
 
 // Errorf logs to dashboard (sends message through log channel) plus echoes to standard output
-func Errorf(message string, a ...interface{}) {
-	f(ErrorLog, message, a...)
+func Errorf(message string, args ...interface{}) {
+	log.Errorf(message, args...)
 }
 
 // Fatalf logs to dashboard (sends message through log channel) plus echoes to standard output
-func Fatalf(message string, a ...interface{}) {
-	f(FatalLog, message, a...)
-	os.Exit(1)
+func Fatalf(message string, args ...interface{}) {
+	log.Fatalf(message, args...)
 }
 
-func f(level int, message string, a ...interface{}) {
-	if level < minlevel {
-		return
-	}
-	m.Lock()
-	defer m.Unlock()
-	if len(hooks[level]) > 0 {
-		for _, h := range hooks[level] {
-			if h == nil {
-				continue
-			}
-			err := h(fmt.Sprintf(message, a...))
-			if err != nil {
-				fmt.Fprintf(out, "Log: hook returned error %#v %v\n", h, err)
-				// store(level, fmt.Sprintf("Log: hook returned error %#v %v\n", h, err))
-			}
-		}
-	}
-	if len(a) > 0 {
-		message = truncateString(fmt.Sprintf(message, a...), maxlen)
-	}
-	message = time.Now().Format("2006-01-02 15:04:05Z07:00 ") + message
-	fmt.Fprintln(out, message)
-	//store(level, message)
+type HookWriter struct {
+	Hook HookFunc
 }
 
-// // Filter returns logs for minimum level
-// func Filter(minlevel int) (ret []string) {
-// 	for _, s := range logs {
-// 		z, _ := strconv.Atoi(s[0:1])
-// 		if z&^minlevel > 0 {
-// 			ret = append(ret, s[1:])
-// 		}
-// 	}
-// 	return
-// }
+func (h HookWriter) Write(p []byte) (n int, err error) {
+	h.Hook(string(p))
+	return len(p), nil
+}
 
 func init() {
-	hooks = make(map[int][]HookFunc, 1)
+	// Setup logger
+	lumberjackLogrotate = &lumberjack.Logger{
+		Filename:   LogFilePath,
+		MaxSize:    5, // Max megabytes before log is rotated
+		MaxBackups: 0, // Max number of old log files to keep
+		MaxAge:     0, // Max number of days to retain log files
+		Compress:   true,
+	}
+
+	log.SetFormatter(&log.TextFormatter{FullTimestamp: true, TimestampFormat: time.RFC1123Z})
+
+	logMultiWriter := io.MultiWriter(os.Stdout, lumberjackLogrotate)
+	log.SetOutput(logMultiWriter)
+
+	log.WithFields(log.Fields{
+		"Runtime Version": runtime.Version(),
+		"Number of CPUs":  runtime.NumCPU(),
+		"Arch":            runtime.GOARCH,
+	}).Info("Application Initializing")
 }
