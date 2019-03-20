@@ -1,6 +1,7 @@
 package slog
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -29,10 +30,12 @@ type HookFunc func(message string) error
 
 var lumberjackLogrotate *lumberjack.Logger
 var maxlen = 5000
+var hook HookFunc
 
 // RegisterHook will execute given hook function on every message
-func RegisterHook(h HookFunc) {
-	log.SetOutput(io.MultiWriter(os.Stdout, lumberjackLogrotate, HookWriter{Hook: h}))
+func RegisterHook(h HookFunc, level int) {
+	hook = h
+	//	log.SetOutput(io.MultiWriter(os.Stdout, lumberjackLogrotate))
 }
 
 func truncateString(str string, num int) string {
@@ -62,6 +65,7 @@ func Infof(message string, args ...interface{}) {
 
 // Errorf logs to dashboard (sends message through log channel) plus echoes to standard output
 func Errorf(message string, args ...interface{}) {
+	hook(fmt.Sprintf(message, args...))
 	log.Errorf(message, args...)
 }
 
@@ -72,11 +76,6 @@ func Fatalf(message string, args ...interface{}) {
 
 type HookWriter struct {
 	Hook HookFunc
-}
-
-func (h HookWriter) Write(p []byte) (n int, err error) {
-	h.Hook(string(p))
-	return len(p), nil
 }
 
 func init() {
