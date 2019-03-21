@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 
 	"runtime"
 
@@ -90,7 +89,13 @@ func init() {
 		Compress:   true,
 	}
 
-	log.SetFormatter(&log.TextFormatter{FullTimestamp: true, TimestampFormat: time.RFC1123Z})
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors:   false,
+		ForceColors:     true,
+		TimestampFormat: "2006-01-02 15:04:05",
+		FullTimestamp:   true,
+	},
+	)
 
 	logMultiWriter := io.MultiWriter(os.Stdout, lumberjackLogrotate)
 	log.SetOutput(logMultiWriter)
