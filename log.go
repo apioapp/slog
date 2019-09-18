@@ -99,10 +99,4 @@ func init() {
 
 	logMultiWriter := io.MultiWriter(os.Stdout, lumberjackLogrotate)
 	log.SetOutput(logMultiWriter)
-
-	log.WithFields(log.Fields{
-		"Runtime Version": runtime.Version(),
-		"Number of CPUs":  runtime.NumCPU(),
-		"Arch":            runtime.GOARCH,
-	}).Info("Application Initializing")
 }
