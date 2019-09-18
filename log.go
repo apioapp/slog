@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-
-	"runtime"
-
+	
 	"github.com/natefinch/lumberjack"
 	log "github.com/sirupsen/logrus"
 )
