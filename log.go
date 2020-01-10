@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	
+
 	"github.com/natefinch/lumberjack"
 	log "github.com/sirupsen/logrus"
 )
@@ -13,9 +13,7 @@ const LogFilePath = "logs/misc.log"
 
 const (
 	// InfoLog is Info level (lowest) for SetMinLevel
-	InfoLog = 1 << iota
-	// WarningLog is Warning level for SetMinLevel, between InfoLog and ErrorLog
-	WarningLog
+	InfoLog = iota + 1
 	// ErrorLog is Error level for SetMinLevel, between WarningLog and FatalLog
 	ErrorLog
 	// FatalLog is highest log level for SetMinLevel (logging into Fatalf will also throw panic())
@@ -24,14 +22,37 @@ const (
 
 // HookFunc is a callback function type, getting message as argument
 type HookFunc func(message string) error
+type LevelHookFunc func(message string, level int) error
 
 var lumberjackLogrotate *lumberjack.Logger
 var maxlen = 5000
-var hook HookFunc
+var hooks map[int][]HookFunc
+var lhooks map[int][]LevelHookFunc
+
+// SetOutput sets the standard logger output to a writer
+func SetOutput(w io.Writer) {
+	log.SetOutput(w)
+}
 
 // RegisterHook will execute given hook function on every message
-func RegisterHook(h HookFunc, level int) {
-	hook = h
+func RegisterHook(h HookFunc, minlevel int) {
+	if hooks == nil {
+		hooks = map[int][]HookFunc{}
+	}
+	for l := minlevel; l <= FatalLog; l++ {
+		hooks[l] = append(hooks[l], h)
+	}
+	//	log.SetOutput(io.MultiWriter(os.Stdout, lumberjackLogrotate))
+}
+
+// RegisterLevelHook will execute given hook function on every message (message and level)
+func RegisterLevelHook(h LevelHookFunc, minlevel int) {
+	if lhooks == nil {
+		lhooks = map[int][]LevelHookFunc{}
+	}
+	for l := minlevel; l <= FatalLog; l++ {
+		lhooks[l] = append(lhooks[l], h)
+	}
 	//	log.SetOutput(io.MultiWriter(os.Stdout, lumberjackLogrotate))
 }
 
@@ -57,19 +78,46 @@ func truncateString(str string, num int) string {
 
 // Infof logs to dashboard (sends message through log channel) plus echoes to standard output
 func Infof(message string, args ...interface{}) {
+	if hooks != nil && hooks[InfoLog] != nil {
+		for _, h := range hooks[InfoLog] {
+			h(fmt.Sprintf(message, args...))
+		}
+	}
+	if lhooks != nil && lhooks[InfoLog] != nil {
+		for _, h := range lhooks[InfoLog] {
+			h(fmt.Sprintf(message, args...), InfoLog)
+		}
+	}
 	log.Infof(message, args...)
 }
 
 // Errorf logs to dashboard (sends message through log channel) plus echoes to standard output
 func Errorf(message string, args ...interface{}) {
-	if hook != nil {
-		hook(fmt.Sprintf(message, args...))
+	if hooks != nil && hooks[ErrorLog] != nil {
+		for _, h := range hooks[ErrorLog] {
+			h(fmt.Sprintf(message, args...))
+		}
+	}
+	if lhooks != nil && lhooks[ErrorLog] != nil {
+		for _, h := range lhooks[ErrorLog] {
+			h(fmt.Sprintf(message, args...), ErrorLog)
+		}
 	}
 	log.Errorf(message, args...)
 }
 
 // Fatalf logs to dashboard (sends message through log channel) plus echoes to standard output
 func Fatalf(message string, args ...interface{}) {
+	if hooks != nil && hooks[FatalLog] != nil {
+		for _, h := range hooks[FatalLog] {
+			h(fmt.Sprintf(message, args...))
+		}
+	}
+	if lhooks != nil && lhooks[FatalLog] != nil {
+		for _, h := range lhooks[FatalLog] {
+			h(fmt.Sprintf(message, args...), FatalLog)
+		}
+	}
 	log.Fatalf(message, args...)
 }
 
