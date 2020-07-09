@@ -42,7 +42,13 @@ func SetOutput(w io.Writer) {
 
 // SetFilename modifies the output file path
 func SetFilename(filename string) {
-	lumberjackLogrotate.Filename = filename
+	lumberjackLogrotate.Close()
+	initWithFilename(filename)
+}
+
+// Close will close the logfile
+func Close() {
+	lumberjackLogrotate.Close()
 }
 
 // RegisterHook will execute given hook function on every message
@@ -132,10 +138,10 @@ func Fatalf(message string, args ...interface{}) {
 	log.Fatalf(message, args...)
 }
 
-func init() {
+func initWithFilename(filename string) {
 	// Setup logger
 	lumberjackLogrotate = &lumberjack.Logger{
-		Filename:   LogFilePath,
+		Filename:   filename,
 		MaxSize:    5, // Max megabytes before log is rotated
 		MaxBackups: 0, // Max number of old log files to keep
 		MaxAge:     0, // Max number of days to retain log files
@@ -152,4 +158,8 @@ func init() {
 
 	logMultiWriter := io.MultiWriter(os.Stdout, lumberjackLogrotate)
 	log.SetOutput(logMultiWriter)
+}
+
+func init() {
+	initWithFilename(LogFilePath)
 }
