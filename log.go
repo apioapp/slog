@@ -1,3 +1,7 @@
+// Slog uses logrus and lumberjack to provide a simple logging interface with two main funcs:
+// Infof(string, ...interface{}) and Errorf(string, ...interface{})
+// for logging to stdout and logfile at the same time
+
 package slog
 
 import (
@@ -22,6 +26,8 @@ const (
 
 // HookFunc is a callback function type, getting message as argument
 type HookFunc func(message string) error
+
+// LevelHookFunc is hook func with log level input attribute
 type LevelHookFunc func(message string, level int) error
 
 var lumberjackLogrotate *lumberjack.Logger
@@ -32,6 +38,11 @@ var lhooks map[int][]LevelHookFunc
 // SetOutput sets the standard logger output to a writer
 func SetOutput(w io.Writer) {
 	log.SetOutput(w)
+}
+
+// SetFilename modifies the output file path
+func SetFilename(filename string) {
+	lumberjackLogrotate.Filename = filename
 }
 
 // RegisterHook will execute given hook function on every message
@@ -121,10 +132,6 @@ func Fatalf(message string, args ...interface{}) {
 	log.Fatalf(message, args...)
 }
 
-type HookWriter struct {
-	Hook HookFunc
-}
-
 func init() {
 	// Setup logger
 	lumberjackLogrotate = &lumberjack.Logger{
@@ -137,7 +144,7 @@ func init() {
 
 	log.SetFormatter(&log.TextFormatter{
 		DisableColors:   false,
-		ForceColors:     true,
+		ForceColors:     false,
 		TimestampFormat: "2006-01-02 15:04:05",
 		FullTimestamp:   true,
 	},
