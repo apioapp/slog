@@ -15,7 +15,7 @@ Log messages are auto-truncated in case of big data structures accidentally fill
 
 ```go
 package main
-import "github.com/shoobyban/slog"
+import "github.com/apioapp/slog"
 func main() {
     a := map[string]string{"A":"b"}
     slog.RegisterHook(func(message string) error{
