@@ -35,6 +35,10 @@ var maxlen = 5000
 var hooks map[int][]HookFunc
 var lhooks map[int][]LevelHookFunc
 
+func JSON() {
+	log.SetFormatter(&log.JSONFormatter{})
+}
+
 // SetOutput sets the standard logger output to a writer
 func SetOutput(w io.Writer) {
 	log.SetOutput(w)
