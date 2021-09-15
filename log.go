@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const LogFilePath = "logs/misc.log"
+var LogFilePath = "logs/misc.log"
 
 const (
 	// InfoLog is Info level (lowest) for SetMinLevel
@@ -34,9 +34,14 @@ var lumberjackLogrotate *lumberjack.Logger
 var maxlen = 5000
 var hooks map[int][]HookFunc
 var lhooks map[int][]LevelHookFunc
+var service string
+var l *log.Entry
 
-func JSON() {
+func JSON(serviceName string) {
+	service = serviceName
+	LogFilePath = "logs/" + service + ".log"
 	log.SetFormatter(&log.JSONFormatter{})
+	l = l.WithField("service", service)
 }
 
 // SetOutput sets the standard logger output to a writer
@@ -109,7 +114,7 @@ func Infof(message string, args ...interface{}) {
 			h(fmt.Sprintf(message, args...), InfoLog)
 		}
 	}
-	log.Infof(message, args...)
+	l.Infof(message, args...)
 }
 
 // Errorf logs to dashboard (sends message through log channel) plus echoes to standard output
@@ -124,7 +129,7 @@ func Errorf(message string, args ...interface{}) {
 			h(fmt.Sprintf(message, args...), ErrorLog)
 		}
 	}
-	log.Errorf(message, args...)
+	l.Errorf(message, args...)
 }
 
 // Fatalf logs to dashboard (sends message through log channel) plus echoes to standard output
@@ -139,7 +144,7 @@ func Fatalf(message string, args ...interface{}) {
 			h(fmt.Sprintf(message, args...), FatalLog)
 		}
 	}
-	log.Fatalf(message, args...)
+	l.Fatalf(message, args...)
 }
 
 func initWithFilename(filename string) {
@@ -159,7 +164,7 @@ func initWithFilename(filename string) {
 		FullTimestamp:   true,
 	},
 	)
-
+	l = log.WithFields(log.Fields{})
 	logMultiWriter := io.MultiWriter(os.Stdout, lumberjackLogrotate)
 	log.SetOutput(logMultiWriter)
 }
